@@ -1,2 +1,6 @@
 node_modules
 dist_electron
+#Electron-builder output
+/dist_electron
+/build
+.env

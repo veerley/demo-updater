@@ -3,9 +3,14 @@
 </template>
 
 <script>
-// const { ipcRenderer } = require("electron");
+const { ipcRenderer } = require("electron");
 export default {
   name: "App",
+  mounted() {
+    ipcRenderer.on("message", (event, text) => {
+      console.log("message:", text);
+    });
+  },
 };
 </script>
 <style scoped></style>

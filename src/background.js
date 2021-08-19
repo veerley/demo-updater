@@ -1,10 +1,10 @@
 "use strict";
 
-import { app, protocol, BrowserWindow, Menu, dialog, ipcMain } from "electron";
+import { app, protocol, BrowserWindow, Menu } from "electron";
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import installExtension, { VUEJS3_DEVTOOLS } from "electron-devtools-installer";
 const isDevelopment = process.env.NODE_ENV !== "production";
-const fs = require("fs");
+import { autoUpdater } from "electron-updater";
 
 // Scheme must be registered before the app is ready
 protocol.registerSchemesAsPrivileged([
@@ -40,6 +40,7 @@ async function createWindow() {
     createProtocol("app");
     // Load the index.html when not in development
     win.loadURL("app://./index.html");
+    autoUpdater.checkForUpdatesAndNotify();
   }
   setupMenu();
 }
@@ -112,20 +113,6 @@ function setupMenu() {
           },
         ]
       : []),
-    // { role: 'fileMenu' }
-    {
-      label: "File",
-      submenu: [
-        {
-          label: "Open Database File",
-          accelerator: "CommandOrControl+F",
-          click() {
-            loadPatients();
-          },
-        },
-        isMac ? { role: "close" } : { role: "quit" },
-      ],
-    },
     // { role: 'editMenu' }
     {
       label: "Edit",
@@ -198,3 +185,51 @@ function setupMenu() {
   const menu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(menu);
 }
+
+//Auto Updates
+const sendStatusToWindow = (text) => {
+  if (win) {
+    win.webContents.send("message", text);
+  }
+};
+
+/*checking for updates*/
+autoUpdater.on("checking-for-update", () => {
+  sendStatusToWindow("checking for update...");
+});
+
+/*No updates available*/
+autoUpdater.on("update-not-available", (info) => {
+  sendStatusToWindow("update not available");
+});
+
+/*New Update Available*/
+autoUpdater.on("update-available", (info) => {
+  sendStatusToWindow("update available");
+});
+
+autoUpdater.on("error", (err) => {
+  sendStatusToWindow(`Error in auto-updater: ${err.toString()}`);
+});
+
+/*Download Status Report*/
+autoUpdater.on("download-progress", (progressObj) => {
+  let log_message = "Download speed: " + progressObj.bytesPerSecond;
+  log_message = log_message + " - Downloaded " + progressObj.percent + "%";
+  log_message =
+    log_message +
+    " (" +
+    progressObj.transferred +
+    "/" +
+    progressObj.total +
+    ")";
+  sendStatusToWindow(log_message);
+});
+
+/*Download Completion Message*/
+autoUpdater.on("update-downloaded", (info) => {
+  sendStatusToWindow("Update downloaded; will install in 5 seconds");
+  setTimeout(function() {
+    autoUpdater.quitAndInstall();
+  }, 5000);
+});
